@@ -1,0 +1,391 @@
+< UNTUK PANDUAN WEB - BACKEND + FRONTEND > 
+
+B.1. Golang Web App: Hello World
+B.2. Routing http.HandleFunc
+B.3. Routing Static Assets
+B.4. Template: Render HTML Template
+B.5. Template: Render Partial HTML Template
+B.6. Template: Actions & Variables
+B.7. Template: Functions
+B.8. Template: Custom Functions
+B.9. Template: Render Specific HTML Template
+B.10. Template: Render HTML String
+B.11. HTTP Method: POST & GET
+B.12. Form Value
+B.13. Form Upload File
+B.14. AJAX JSON Payload
+B.15. AJAX JSON Response
+B.16. AJAX Multiple File Upload
+B.17. Download File
+B.18. HTTP Basic Auth
+B.19. Middleware http.Handler
+B.20. Custom Multiplexer
+B.21. HTTP Cookie
+B.22. Simple Configuration
+B.23. Server Handler HTTP Request Cancellation
+
+B.1. Golang Web App: Hello World
+Penjelasan
+Pada dasarnya, sebuah aplikasi web di Golang adalah program yang bisa mendengarkan request HTTP dari browser (client) dan memberikan response.
+Untuk membuat web sederhana "Hello World" kamu butuh:
+
+Membuat sebuah server
+
+Menentukan port untuk mendengarkan koneksi
+
+Menulis response yang akan dikirimkan ke user
+
+Contoh kode
+======================================
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "Hello World!") // Menulis langsung ke browser
+}
+
+func main() {
+    http.HandleFunc("/", handler) // Set route utama "/"
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil) // Start server di port 8080
+}
+=======================================
+Catatan Penting
+http.HandleFunc("/", handler) artinya setiap request ke / akan diproses oleh fungsi handler.
+
+http.ListenAndServe(":8080", nil) menjalankan server di port 8080.
+
+Jika server error saat start, ListenAndServe akan mengembalikan error.
+
+======
+B.2. Routing http.HandleFunc
+Penjelasan
+Routing dalam web server itu seperti "petunjuk arah", menentukan URL mana yang harus diproses oleh fungsi tertentu.
+Dengan http.HandleFunc(), kita bisa menentukan fungsi mana yang menangani URL yang spesifik.
+
+Contoh kode
+==================================================
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "Ini halaman Home!")
+}
+
+func aboutHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "Ini halaman About!")
+}
+
+func main() {
+    http.HandleFunc("/", homeHandler)      // URL "/"
+    http.HandleFunc("/about", aboutHandler) // URL "/about"
+    
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+==================================
+Catatan Penting
+URL / akan ke homeHandler
+
+URL /about akan ke aboutHandler
+
+Pastikan handler harus memiliki dua parameter: (http.ResponseWriter, *http.Request)
+==============
+B.3. Routing Static Assets
+Penjelasan
+Static assets adalah file yang tidak berubah-ubah, misalnya gambar, CSS, JavaScript.
+Server Go bisa mengatur folder khusus untuk mengirimkan file-file ini ke browser.
+
+Contoh kode
+
+======================================
+package main
+
+import (
+    "net/http"
+)
+
+func main() {
+    // Membuat handler untuk serve folder public/
+    fs := http.FileServer(http.Dir("./public"))
+    http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+    http.ListenAndServe(":8080", nil)
+}
+====================
+Struktur foldernya:
+
+/public
+    /images
+        logo.png
+    /css
+        style.css
+Akses file:
+
+http://localhost:8080/static/images/logo.png
+
+http://localhost:8080/static/css/style.css
+
+Catatan Penting
+http.FileServer butuh directory (http.Dir("./public"))
+
+http.StripPrefix berguna supaya URL /static/ dihapus sebelum cari file aslinya.
+
+Jangan lupa buat folder public dan isinya!
+==========================================
+
+B.4. Template: Render HTML Template
+Penjelasan
+Di Golang, kita bisa menggunakan template untuk menghasilkan HTML dinamis. Template memungkinkan kita untuk memisahkan logika aplikasi dengan tampilan. Kita bisa membuat template yang berisi HTML dan menyisipkan data ke dalamnya.
+
+Dengan menggunakan template.ParseFiles(), kita dapat memuat template HTML yang akan dirender oleh server dan dikirimkan ke browser.
+
+Contoh kode
+====================
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    t, err := template.ParseFiles("index.html") // Memuat file template index.html
+    if err != nil {
+        fmt.Println(err)
+    }
+    t.Execute(w, nil) // Menjalankan template tanpa data (untuk halaman statis)
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+-==============================
+Catatan Penting
+Template HTML harus ada di folder yang dapat diakses oleh program (misalnya di direktori yang sama dengan program).
+
+t.Execute(w, nil) akan mengirimkan halaman HTML ke browser.
+
+Kamu bisa memasukkan data ke dalam template dengan menggantikan nil dengan objek data.
+
+=========================
+B.5. Template: Render Partial HTML Template
+Penjelasan
+Kadang kita perlu memecah template menjadi beberapa bagian, misalnya header, footer, atau navigasi, agar bisa digunakan kembali di beberapa halaman. Golang memudahkan kita untuk merender bagian template tertentu secara terpisah.
+
+Contoh kode
+=======================
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    t, err := template.ParseFiles("layout.html", "content.html") // Memuat layout dan content
+    if err != nil {
+        fmt.Println(err)
+    }
+    t.Execute(w, nil)
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+
+=======================================
+Catatan Penting
+layout.html bisa berisi struktur umum (seperti header dan footer), sedangkan content.html berisi bagian spesifik untuk halaman.
+
+Dengan memecah template, kamu bisa mengelola kode HTML lebih efisien dan reusable.
+
+============================
+B.6. Template: Actions & Variables
+Penjelasan
+Dengan template, kita bisa menyisipkan variabel ke dalam HTML. Misalnya, menampilkan nama pengguna atau tanggal saat ini di halaman web. Golang menggunakan sintaks {{ .Variable }} untuk menampilkan nilai dari variabel yang diteruskan ke template.
+
+Contoh kode
+=================================
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    data := struct {
+        Name string
+    }{
+        Name: "John Doe", // Data yang akan dimasukkan ke template
+    }
+    t, err := template.ParseFiles("index.html")
+    if err != nil {
+        fmt.Println(err)
+    }
+    t.Execute(w, data) // Menyisipkan data ke dalam template
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+
+==========================================
+Catatan Penting
+data adalah struct yang menyimpan variabel yang ingin kamu tampilkan di template.
+
+t.Execute(w, data) akan mengirimkan data ke dalam template dan menampilkan nilai variabel di HTML.
+
+===========================================
+B.7. Template: Functions
+Penjelasan
+Kita juga bisa menggunakan fungsi di dalam template untuk memodifikasi atau memanipulasi data sebelum ditampilkan. Misalnya, mengubah teks menjadi huruf kapital atau format tanggal.
+
+Contoh kode
+
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+    "strings"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    funcMap := template.FuncMap{
+        "ToUpper": strings.ToUpper, // Fungsi untuk mengubah teks menjadi huruf kapital
+    }
+
+    t, err := template.New("index.html").Funcs(funcMap).ParseFiles("index.html")
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    data := struct {
+        Name string
+    }{
+        Name: "john doe",
+    }
+    t.Execute(w, data) // Menjalankan template dengan fungsi yang sudah didefinisikan
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+========================================
+Catatan Penting
+Funcs(funcMap) menambahkan fungsi baru ke dalam template.
+
+Fungsi ToUpper akan mengubah semua huruf pada nama menjadi huruf kapital.
+=======================
+B.8. Template: Custom Functions
+Penjelasan
+Selain menggunakan fungsi bawaan dari Go, kita bisa membuat fungsi kustom untuk digunakan di dalam template. Misalnya, kita bisa membuat fungsi untuk memformat tanggal atau menghitung umur.
+
+Contoh kode
+======================================
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+    "time"
+)
+
+func customFormatDate(t time.Time) string {
+    return t.Format("02 Jan 2006") // Format tanggal custom
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    funcMap := template.FuncMap{
+        "formatDate": customFormatDate, // Menambahkan fungsi custom
+    }
+
+    t, err := template.New("index.html").Funcs(funcMap).ParseFiles("index.html")
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    data := struct {
+        Date time.Time
+    }{
+        Date: time.Now(),
+    }
+    t.Execute(w, data) // Menjalankan template dengan fungsi custom
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+==========================================
+Catatan Penting
+Fungsi customFormatDate menerima time.Time dan mengembalikan string dengan format tanggal tertentu.
+
+Dengan Funcs(funcMap), kamu bisa menambahkan fungsi kustom yang berguna dalam template.
+
+======================================
+B.9. Template: Render Specific HTML Template
+Penjelasan
+Kadang kita perlu merender template yang berbeda tergantung pada kondisi tertentu, misalnya menampilkan halaman berbeda untuk admin dan user biasa.
+
+Contoh kode
+
+=====================================
+package main
+
+import (
+    "fmt"
+    "html/template"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    var tmpl string
+    if r.URL.Path == "/admin" {
+        tmpl = "admin.html"
+    } else {
+        tmpl = "user.html"
+    }
+
+    t, err := template.ParseFiles(tmpl)
+    if err != nil {
+        fmt.Println(err)
+    }
+    t.Execute(w, nil)
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    fmt.Println("Server berjalan di http://localhost:8080")
+    http.ListenAndServe(":8080", nil)
+}
+=========================================
+Catatan Penting
+Berdasarkan kondisi, kita memilih template yang sesuai untuk dirender.
+
+Halaman admin.html dan user.html harus ada di folder yang bisa diakses oleh program.
+
