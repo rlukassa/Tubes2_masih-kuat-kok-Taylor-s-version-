@@ -16,7 +16,7 @@ var mapper map[string]string
 func init() {
     var err error
     // Path database yang benar
-    db, err = sql.Open("sqlite3", "c:/Users/USER/OneDrive/Desktop/tubes2stima/Tubes2Stima/database/alchemy.db")
+    db, err = sql.Open("sqlite3", "../database/alchemy.db")
     if err != nil {
         log.Fatalf("Gagal membuka database: %v", err)
     }
@@ -26,7 +26,7 @@ func init() {
     log.Println("Berhasil terhubung ke database")
 
     // Load mapper.json
-    file, err := os.Open("C:/Users/USER/OneDrive/Desktop/tubes2stima/Tubes2Stima/database/mapper2.json")
+    file, err := os.Open("../database/mapper2.json")
     if err != nil {
         log.Fatalf("Gagal membuka mapper.json: %v", err)
     }
