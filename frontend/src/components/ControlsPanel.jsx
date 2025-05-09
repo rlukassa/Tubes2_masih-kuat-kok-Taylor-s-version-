@@ -76,14 +76,14 @@ export default function ControlsPanel({ searchParams, setSearchParams }) {
         <div className="option">
           <input
             type="radio"
-            id="best-recipe"
+            id="one-recipe"
             name="recipeType"
-            checked={searchParams.recipeType === "Best"}
-            onChange={() => handleRecipeTypeChange("Best")}
+            checked={searchParams.recipeType === "One"}
+            onChange={() => handleRecipeTypeChange("One")}
           />
-          <label htmlFor="best-recipe">
-            <strong>Best Recipe</strong>
-            <div className="option-description">Find the shortest path Recipe for the element</div>
+          <label htmlFor="one-recipe">
+            <strong>One Recipe</strong>
+            <div className="option-description">Find a recipe path for the element</div>
           </label>
         </div>
 
@@ -97,7 +97,7 @@ export default function ControlsPanel({ searchParams, setSearchParams }) {
           />
           <label htmlFor="all-recipes">
             <strong>All Recipes</strong>
-            <div className="option-description">Find all possible Recipes for the element</div>
+            <div className="option-description">Find all possible recipes for the element</div>
           </label>
         </div>
 
@@ -111,7 +111,7 @@ export default function ControlsPanel({ searchParams, setSearchParams }) {
           />
           <label htmlFor="limit-recipes">
             <strong>Limit Recipes</strong>
-            <div className="option-description">Limit to a Specified number of unique/different Recipes</div>
+            <div className="option-description">Limit to a specified number for different recipes</div>
           </label>
         </div>
 

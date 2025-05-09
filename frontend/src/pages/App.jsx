@@ -8,9 +8,10 @@ import TreeVisualizer from "../components/TreeVisualizer";
 import { useSearch } from "../hooks/useSearch";
 import testTubeIcon from "../assets/test-tube.png";
 import "../../public/App.css";
+import "../assets/background.css";
 import mapper from "../../../database/mapper2.json"; // Pastikan mapper diimpor
 
-export default function App() {
+function App() {
   const [currentView, setCurrentView] = useState("landing"); // 'landing', 'search', 'results'
   const [selectedElement, setSelectedElement] = useState(null);
   const {
@@ -91,8 +92,8 @@ export default function App() {
           Explore paths from basics to complex creations using BFS, DFS, and Bidirectional search.
         </p>
 
-        <button className="start-button" onClick={handleStartExploring}>
-          <img src={testTubeIcon || "/placeholder.svg"} alt="" className="button-icon" /> Start Exploring
+        <button className="start-button clickable-button" onClick={handleStartExploring}>
+          <img src={testTubeIcon || "icon.svg"} alt="" className="button-icon" /> Start Exploring
         </button>
       </div>
     </div>
@@ -113,7 +114,7 @@ export default function App() {
           <ControlsPanel searchParams={searchParams} setSearchParams={setSearchParams} />
 
           <button
-            className="search-button"
+            className="search-button clickable-button"
             onClick={handleStartSearch}
             disabled={!selectedElement}
           >
@@ -133,10 +134,10 @@ export default function App() {
     return (
       <div className="results-container">
         <div className="results-header">
-          <button className="back-button" onClick={handleBackToSearch}>
+          <button className="back-button clickable-button" onClick={handleBackToSearch}>
             ← Back to Search
           </button>
-          <button className="print-button">
+          <button className="print-button clickable-button">
             <span className="print-icon">🖨️</span> Print Tree
           </button>
         </div>
@@ -165,10 +166,12 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className="app bg-stars">
       {currentView === "landing" && renderLandingPage()}
       {currentView === "search" && renderSearchPage()}
       {currentView === "results" && renderResultsPage()}
     </div>
   );
 }
+
+export default App; 
