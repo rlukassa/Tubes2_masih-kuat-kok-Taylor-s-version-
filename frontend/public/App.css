@@ -464,14 +464,6 @@ body {
   cursor: not-allowed;
 }
 
-.pagination-ellipsis {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.5rem;
-  height: 2.5rem;
-  color: var(--text-secondary);
-}
 
 .controls-container {
   background-color: var(--background-light);
@@ -786,3 +778,4 @@ body {
     max-width: 700px;
   }
 }
+
