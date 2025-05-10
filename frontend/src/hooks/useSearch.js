@@ -1,98 +1,86 @@
-"use client"
+// src/hooks/useSearch.js
+// Custom React hook untuk mengelola proses pencarian resep di aplikasi Little Alchemy 2.
+// Menyediakan state dan fungsi untuk mengatur parameter pencarian, hasil, status loading, serta eksekusi pencarian ke backend.
 
 import { useState, useEffect } from "react";
 
-export function useSearch(initialItems = []) {
-    const [searchParams, setSearchParams] = useState({
-        algorithm: "BFS",
-        recipeType: "Best",
-        maxRecipes: 5,
-    });
+export function useSearch() {
+  // State untuk parameter pencarian (algoritma, tipe resep, jumlah maksimal resep)
+  const [searchParams, setSearchParams] = useState({
+    algorithm: "BFS",      // Algoritma default: BFS
+    recipeType: "One",     // Tipe resep default: One
+    maxRecipes: 5,         // Jumlah maksimal resep default: 5
+  });
 
-    const [searchResults, setSearchResults] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [executionTime, setExecutionTime] = useState(0);
-    const [nodesVisited, setNodesVisited] = useState(0);
-    const [progress, setProgress] = useState(0);
+  // State untuk hasil pencarian dan status proses
+  const [searchResults, setSearchResults] = useState([]); // Menyimpan hasil pencarian dari backend
+  const [isLoading, setIsLoading] = useState(false);      // Status loading saat pencarian berlangsung
+  const [executionTime, setExecutionTime] = useState(0);  // Lama waktu eksekusi pencarian (ms)
+  const [nodesVisited, setNodesVisited] = useState(0);    // Jumlah node yang dikunjungi selama pencarian
+  const [progress, setProgress] = useState(0);            // Progress pencarian (untuk animasi/progress bar)
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [items, setItems] = useState(initialItems);
-    const [filteredItems, setFilteredItems] = useState(initialItems);
+  // Fungsi untuk memulai pencarian resep
+  const startSearch = async (elements) => {
+    setIsLoading(true);           // Set status loading
+    setSearchResults([]);         // Reset hasil sebelumnya
+    setExecutionTime(0);          // Reset waktu eksekusi
+    setNodesVisited(0);           // Reset jumlah node
+    setProgress(0);               // Reset progress
 
-    useEffect(() => {
-        setItems(initialItems);
-        setFilteredItems(initialItems);
-    }, [initialItems]);
+    try {
+      // Siapkan request body untuk dikirim ke backend
+      const requestBody = {
+        elementName: elements[0].name,           // Nama elemen awal
+        algorithm: searchParams.algorithm,       // Algoritma pencarian
+        recipeType: searchParams.recipeType,     // Tipe resep
+        maxRecipes: searchParams.maxRecipes,     // Jumlah maksimal resep
+      };
+      // Jika algoritma Bidirectional, tambahkan targetName
+      if (searchParams.algorithm === "Bidirectional" && elements.length > 1) {
+        requestBody.targetName = elements[1].name;
+      }
 
-    useEffect(() => {
-        if (!searchTerm.trim()) {
-            setFilteredItems(items);
-            return;
-        }
-        const searchTermLower = searchTerm.toLowerCase();
-        const filtered = items.filter(item =>
-            item && (item.name.toLowerCase().includes(searchTermLower) || 
-                    (item.description && item.description.toLowerCase().includes(searchTermLower)))
-        );
-        setFilteredItems(filtered);
-    }, [searchTerm, items]);
+      // Kirim request ke backend (pastikan port dan endpoint sudah benar)
+      const response = await fetch("http://localhost:8081/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
 
-    const startSearch = async (element) => {
-        setIsLoading(true);
-        setSearchResults([]);
-        setExecutionTime(0);
-        setNodesVisited(0);
-        setProgress(0);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
 
-        try {
-            const response = await fetch("http://localhost:5000/search", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    elementId: element.id,
-                    algorithm: searchParams.algorithm,
-                    recipeType: searchParams.recipeType,
-                    maxRecipes: searchParams.maxRecipes,
-                }),
-            });
+      // Simpan hasil pencarian ke state
+      setSearchResults(data.results);
+      setNodesVisited(data.nodesVisited);
+      setExecutionTime(data.executionTime);
+      setProgress(100); // Progress selesai
+    } catch (error) {
+      console.error("Search error:", error);
+      alert("Gagal melakukan pencarian. Pastikan backend berjalan.");
+    } finally {
+      setIsLoading(false); // Selesai loading
+    }
+  };
 
-            const data = await response.json();
-            setSearchResults(data.results);
-            setNodesVisited(data.nodesVisited);
-            setExecutionTime(data.executionTime);
-            setProgress(100);
-        } catch (error) {
-            console.error("Search error:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  // Fungsi untuk mereset hasil pencarian dan progress
+  const resetSearch = () => {
+    setSearchResults([]);
+    setExecutionTime(0);
+    setNodesVisited(0);
+    setProgress(0);
+  };
 
-    const resetSearch = () => {
-        setSearchResults([]);
-        setExecutionTime(0);
-        setNodesVisited(0);
-        setProgress(0);
-    };
-
-    return {
-        searchParams,
-        setSearchParams,
-        searchResults,
-        isLoading,
-        executionTime,
-        nodesVisited,
-        progress,
-        startSearch,
-        resetSearch,
-        searchTerm,
-        setSearchTerm,
-        items,
-        setItems,
-        filteredItems,
-        hasResults: filteredItems.length > 0,
-        isSearching: searchTerm.trim() !== "",
-    };
+  // Return semua state dan fungsi yang dibutuhkan komponen lain
+  return {
+    searchParams,      // Parameter pencarian
+    setSearchParams,   // Setter parameter pencarian
+    searchResults,     // Hasil pencarian
+    isLoading,         // Status loading
+    executionTime,     // Lama eksekusi
+    nodesVisited,      // Jumlah node dikunjungi
+    progress,          // Progress pencarian
+    startSearch,       // Fungsi untuk memulai pencarian
+    resetSearch,       // Fungsi untuk mereset hasil
+  };
 }

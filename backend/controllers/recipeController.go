@@ -1,65 +1,52 @@
+// File ini adalah controller untuk endpoint pencarian resep pada backend Little Alchemy 2.
+// Fungsinya menerima request pencarian dari frontend, memanggil service pencarian (BFS, DFS, Bidirectional),
+// dan mengembalikan hasil pencarian dalam format JSON ke frontend.
+
 package controllers
 
 import (
-    "net/http"
-    "github.com/gin-gonic/gin"
-    "main/services" // Sesuaikan dengan path package services Anda
-    "log"
+  "net/http"              // Untuk kebutuhan HTTP response 
+  "github.com/gin-gonic/gin" // Framework web Gin
+  "main/services"         // Import service pencarian resep
 )
 
-func GetElements(c *gin.Context) {
-    elements, err := services.FetchElements()
-    if err != nil {
-        log.Printf("Error fetching elements: %v", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    if elements == nil {
-        log.Println("No elements found in database")
-        c.JSON(http.StatusOK, []interface{}{})
-        return
-    }
-    c.JSON(http.StatusOK, elements)
-}
+func SearchRecipe(c *gin.Context) {
+  var requestBody struct {
+    ElementName string `json:"elementName"` // Nama elemen yang dicari
+    Algorithm   string `json:"algorithm"`   // Algoritma pencarian (BFS, DFS, Bidirectional)
+    RecipeType  string `json:"recipeType"`  // Tipe resep (misal: One Recipe)
+    MaxRecipes  int    `json:"maxRecipes"`  // Maksimal jumlah resep -- buat RecipeType = "Limit .. "
+    TargetName  string `json:"targetName"`  // Target untuk buat Algoritma Bidirectional 
+  }
 
-func SearchRecipes(c *gin.Context) {
-    var request struct {
-        ElementName string `json:"elementName"`
-        TargetName  string `json:"targetName"` // Untuk Bidirectional
-        Algorithm   string `json:"algorithm"`
-        RecipeType  string `json:"recipeType"`
-        MaxRecipes  int    `json:"maxRecipes"`
-    }
-    if err := c.BindJSON(&request); err != nil {
-        log.Printf("Invalid request: %v", err)
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+  if err := c.ShouldBindJSON(&requestBody); err != nil { // Bind dan validasi request body dari frontend
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"}) // Jika gagal, kirim error 400
+    return
+  }
 
-    var results []interface{}
-    var nodesVisited int
-    var executionTime float64
+  var results []interface{}    // Untuk menampung hasil pencarian -- menyimpan array (tree) resep ketika ditemukan
+  var nodesVisited int         // Untuk menghitung node yang dikunjungi 
+  var executionTime float64    // Untuk mencatat waktu eksekusi
 
-    switch request.Algorithm {
-    case "BFS":
-        results, nodesVisited, executionTime = services.BFS(request.ElementName, request.RecipeType, request.MaxRecipes)
-    case "DFS":
-        results, nodesVisited, executionTime = services.DFS(request.ElementName, request.RecipeType, request.MaxRecipes)
-    case "Bidirectional":
-        if request.TargetName == "" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "TargetName required for Bidirectional search"})
-            return
-        }
-        results, nodesVisited, executionTime = services.Bidirectional(request.ElementName, request.TargetName, request.RecipeType, request.MaxRecipes)
-    default:
-        log.Printf("Invalid algorithm: %s", request.Algorithm)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid algorithm"})
-        return
+  switch requestBody.Algorithm { // Pilih algoritma pencarian sesuai permintaan frontend
+  case "BFS":
+    results, nodesVisited, executionTime = services.BFS(requestBody.ElementName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil BFS
+  case "DFS":
+    results, nodesVisited, executionTime = services.DFS(requestBody.ElementName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil DFS
+  case "Bidirectional":
+    if requestBody.TargetName == "" { // Validasi jika Bidirectional harus ada target
+      c.JSON(http.StatusBadRequest, gin.H{"error": "TargetName required for Bidirectional"})
+      return
     }
+    results, nodesVisited, executionTime = services.Bidirectional(requestBody.ElementName, requestBody.TargetName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil Bidirectional
+  default:
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid algorithm"}) // Jika algoritma tidak valid, kirim error 400
+    return
+  }
 
-    c.JSON(http.StatusOK, gin.H{
-        "results":      results,
-        "nodesVisited": nodesVisited,
-        "executionTime": executionTime,
-    })
+  c.JSON(http.StatusOK, gin.H{ // Kirim hasil pencarian ke frontend dalam format JSON
+    "results":       results,        // Hasil pencarian (array pohon resep)
+    "nodesVisited":  nodesVisited,   // Jumlah node yang dikunjungi
+    "executionTime": executionTime,  // Lama waktu eksekusi (ms)
+  })
 }

@@ -1,6 +1,7 @@
+// src/pages/App.jsx
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import ElementPicker from "../components/ElementPicker";
 import ControlsPanel from "../components/ControlsPanel";
 import RecipeResults from "../components/RecipeResults";
@@ -9,11 +10,12 @@ import { useSearch } from "../hooks/useSearch";
 import testTubeIcon from "../assets/test-tube.png";
 import "../../public/App.css";
 import "../assets/background.css";
-import mapper from "../../../database/mapper2.json"; // Pastikan mapper diimpor
+import mapper from "../../../database/mapper2.json";
 
 function App() {
-  const [currentView, setCurrentView] = useState("landing"); // 'landing', 'search', 'results'
-  const [selectedElement, setSelectedElement] = useState(null);
+  const [currentView, setCurrentView] = useState("landing");
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [liveTreeData, setLiveTreeData] = useState([]);
   const {
     searchParams,
     setSearchParams,
@@ -26,25 +28,47 @@ function App() {
     resetSearch,
   } = useSearch();
 
-  // Proses searchResults untuk menambahkan ikon dari mapper2.json
-  const processedResults = useMemo(() => {
-    return (searchResults || []).map((result) => ({
-      ...result,
-      icon: mapper[result.name] || "", // Ambil URL ikon dari mapper2.json
-      children: (result.children || []).map((child) => ({
-        ...child,
-        icon: mapper[child.name] || "",
-      })),
-    }));
-  }, [searchResults]);
+// Mengubah hasil pencarian dari backend (searchResults) agar setiap node dan child-nya
+// memiliki properti icon, sehingga TreeVisualizer bisa menampilkan gambar/icon elemen.
+// useMemo digunakan agar proses ini hanya dijalankan ulang jika searchResults berubah.
+const processedResults = useMemo(() => {
+  return (searchResults || []).map((result) => ({
+    ...result,
+    icon: mapper[result.name] || "", // Tambahkan icon untuk node utama
+    children: (result.children || []).map((child) => ({
+      ...child,
+      icon: mapper[child.name] || "", // Tambahkan icon untuk setiap child
+    })),
+  }));
+}, [searchResults]);
 
+  // Efek untuk melakukan animasi "live update" pada visualisasi pohon.
+// Setiap 100ms, satu node dari processedResults akan ditambahkan ke liveTreeData,
+// sehingga pohon akan muncul secara bertahap (mirip animasi progres pencarian).
+useEffect(() => {
+  if (!processedResults.length || isLoading) return;
+  let index = 0;
+  setLiveTreeData([]); // Reset tree
+  const interval = setInterval(() => {
+    if (index < processedResults.length) {
+      setLiveTreeData((prev) => [...prev, processedResults[index]]);
+      index++;
+    } else {
+      clearInterval(interval); // Hentikan interval jika sudah selesai
+    }
+  }, 100); // Delay 100ms antar node
+  return () => clearInterval(interval); // Bersihkan interval jika dependensi berubah
+}, [processedResults, isLoading]);
+
+
+  // Fungsi untuk mengubah tampilan ke halaman pencarian saat tombol "Start Exploring" ditekan.
   const handleStartExploring = () => {
     setCurrentView("search");
   };
 
   const handleStartSearch = () => {
-    if (!selectedElement) return;
-    startSearch(selectedElement);
+    if (!selectedElements.length) return;
+    startSearch(selectedElements);
     setCurrentView("results");
   };
 
@@ -62,7 +86,6 @@ function App() {
           <img src={testTubeIcon || "/placeholder.svg"} alt="Test tube" className="test-tube-icon" />
         </div>
         <h2 className="subtitle">Recipe Finder</h2>
-
         <div className="basic-elements">
           <div className="element-card">
             <div className="element-icon water-icon">💧</div>
@@ -85,13 +108,11 @@ function App() {
             <p className="element-description">The breath of existence</p>
           </div>
         </div>
-
         <p className="description">
           Uncover the secrets of Little Alchemy 2 with our advanced recipe finder.
           <br />
           Explore paths from basics to complex creations using BFS, DFS, and Bidirectional search.
         </p>
-
         <button className="start-button clickable-button" onClick={handleStartExploring}>
           <img src={testTubeIcon || "icon.svg"} alt="" className="button-icon" /> Start Exploring
         </button>
@@ -103,20 +124,17 @@ function App() {
     <div className="search-container">
       <h1 className="search-title">Search Elements</h1>
       <p className="search-subtitle">Select an element below to find its recipes</p>
-
       <div className="search-grid">
         <ElementPicker
           algorithm={searchParams.algorithm}
-          onElementSelect={setSelectedElement}
+          onElementSelect={setSelectedElements}
         />
-
         <div className="controls-container">
           <ControlsPanel searchParams={searchParams} setSearchParams={setSearchParams} />
-
           <button
             className="search-button clickable-button"
             onClick={handleStartSearch}
-            disabled={!selectedElement}
+            disabled={!selectedElements.length}
           >
             <span className="search-icon">🔍</span> Start Search
           </button>
@@ -126,11 +144,10 @@ function App() {
   );
 
   const renderResultsPage = () => {
-    // Proses elemen yang dipilih untuk mendapatkan nama dan ikon dari mapper2.json
-    const selectedElementData = selectedElement
-      ? { name: selectedElement.name || selectedElement, icon: mapper[selectedElement.name || selectedElement] }
+    const selectedElementData = selectedElements[0]
+      ? { name: selectedElements[0].name, icon: mapper[selectedElements[0].name] }
       : null;
-  
+
     return (
       <div className="results-container">
         <div className="results-header">
@@ -141,22 +158,20 @@ function App() {
             <span className="print-icon">🖨️</span> Print Tree
           </button>
         </div>
-  
         <div className="results-content">
           <RecipeResults
-            selectedElement={selectedElement}
+            selectedElement={selectedElements}
             algorithm={searchParams.algorithm}
             recipeType={searchParams.recipeType}
             progress={progress}
             executionTime={executionTime}
             nodesVisited={nodesVisited}
           />
-  
           <div className="visualization-container">
             <h2 className="visualization-title">Recipe Visualization</h2>
             <TreeVisualizer
-              results={processedResults} // Gunakan processedResults
-              selectedElement={selectedElementData} // Teruskan elemen yang dipilih
+              results={liveTreeData}
+              selectedElement={selectedElementData}
               isLoading={isLoading}
             />
           </div>
@@ -174,4 +189,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

@@ -1,81 +1,69 @@
-"use client"
+// src/components/ElementPicker.jsx
+"use client";
 
-import { useState, useEffect } from "react"
-import mapper from "../../../database/mapper2.json"
+import { useState, useEffect } from "react";
+import mapper from "../../../database/mapper2.json";
 
 export default function ElementPicker({ algorithm, onElementSelect }) {
-  const [searchTerm, setSearchTerm] = useState("") // State untuk input pencarian
-  const [filteredElements, setFilteredElements] = useState([]) // Elemen hasil pencarian
-  const [selectedElements, setSelectedElements] = useState([]) // Elemen yang dipilih
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const elementsPerPage = 8
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredElements, setFilteredElements] = useState([]);
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const elementsPerPage = 8;
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Inisialisasi elemen awal
   useEffect(() => {
     const allElements = Object.keys(mapper).map((key) => ({
       name: key,
       icon: mapper[key],
-    }))
-    setFilteredElements(allElements)
-    setTotalPages(Math.ceil(allElements.length / elementsPerPage))
-  }, [])
+    }));
+    setFilteredElements(allElements);
+    setTotalPages(Math.ceil(allElements.length / elementsPerPage));
+  }, []);
 
-  // Fungsi untuk menangani perubahan input pencarian
-  const handleSearchChange = (e) => {
-    const value = e.target.value.toLowerCase()
-    setSearchTerm(value)
-
-    const results = Object.keys(mapper)
-      .filter((key) => key.toLowerCase().includes(value))
-      .map((key) => ({ name: key, icon: mapper[key] }))
-
-    setFilteredElements(results)
-    setCurrentPage(1) // Reset ke halaman pertama
-    setTotalPages(Math.ceil(results.length / elementsPerPage))
-  }
+  useEffect(() => {
+    const allElements = Object.keys(mapper).map((key) => ({
+      name: key,
+      icon: mapper[key],
+    }));
+    const filtered = allElements.filter((element) =>
+      element.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredElements(filtered);
+    setTotalPages(Math.ceil(filtered.length / elementsPerPage));
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleElementClick = (element) => {
+    let newSelectedElements;
     if (algorithm === "BFS" || algorithm === "DFS") {
-      // Hanya satu elemen yang dapat dipilih
-      setSelectedElements([element])
-      onElementSelect([element])
+      newSelectedElements = [element];
     } else if (algorithm === "Bidirectional") {
-      // Dua elemen harus dipilih
-      if (selectedElements.length === 0) {
-        setSelectedElements([element]) // Pilih elemen pertama
-      } else if (selectedElements.length === 1) {
-        setSelectedElements([...selectedElements, element]) // Pilih elemen kedua
+      if (selectedElements.length < 2) {
+        newSelectedElements = [...selectedElements, element];
       } else {
-        setSelectedElements([element]) // Reset ke elemen pertama
+        newSelectedElements = [element];
       }
-      onElementSelect(selectedElements)
     }
-  }
+    setSelectedElements(newSelectedElements);
+    onElementSelect(newSelectedElements);
+  };
 
-  const getElementsForCurrentPage = () => {
-    const startIndex = (currentPage - 1) * elementsPerPage
-    return filteredElements.slice(startIndex, startIndex + elementsPerPage)
-  }
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
-  const getElementStyle = (element) => {
-    if (selectedElements[0]?.name === element.name) {
-      return { border: "2px solid blue" } // Elemen pertama
-    } else if (selectedElements[1]?.name === element.name) {
-      return { border: "2px solid red" } // Elemen kedua
-    }
-    return { border: "1px solid #ccc" } // Elemen lainnya
-  }
+  const getElementsForCurrentPage = () => {
+    const startIndex = (currentPage - 1) * elementsPerPage;
+    return filteredElements.slice(startIndex, startIndex + elementsPerPage);
+  };
 
-  // Generate pagination buttons
   const renderPaginationButtons = () => {
-    const buttons = []
-
-    // Always show first page
+    const buttons = [];
     buttons.push(
       <button
         key={1}
@@ -92,10 +80,8 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
         }}
       >
         1
-      </button>,
-    )
-
-    // Show page 2 if total pages > 1
+      </button>
+    );
     if (totalPages > 1) {
       buttons.push(
         <button
@@ -113,11 +99,9 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           }}
         >
           2
-        </button>,
-      )
+        </button>
+      );
     }
-
-    // Show page 3 if total pages > 2
     if (totalPages > 2) {
       buttons.push(
         <button
@@ -135,11 +119,9 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           }}
         >
           3
-        </button>,
-      )
+        </button>
+      );
     }
-
-    // Show ellipsis if total pages > 4
     if (totalPages > 4) {
       buttons.push(
         <span
@@ -150,11 +132,9 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           }}
         >
           ...
-        </span>,
-      )
+        </span>
+      );
     }
-
-    // Show last page if total pages > 3
     if (totalPages > 3) {
       buttons.push(
         <button
@@ -172,16 +152,14 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           }}
         >
           {totalPages}
-        </button>,
-      )
+        </button>
+      );
     }
-
-    return buttons
-  }
+    return buttons;
+  };
 
   return (
     <div className="element-picker-container" style={{ padding: "20px" }}>
-      {/* Search Bar */}
       <div className="search-bar-container" style={{ marginBottom: "20px" }}>
         <input
           type="text"
@@ -198,8 +176,6 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           }}
         />
       </div>
-
-      {/* Elements Grid */}
       <div className="elements-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}>
         {getElementsForCurrentPage().map((element) => (
           <div
@@ -211,15 +187,15 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
               textAlign: "center",
               padding: "10px",
               borderRadius: "5px",
-              ...getElementStyle(element),
+              ...(selectedElements[0]?.name === element.name
+                ? { border: "2px solid blue" }
+                : selectedElements[1]?.name === element.name
+                ? { border: "2px solid red" }
+                : { border: "1px solid #ccc" }),
             }}
           >
             <div className="element-icon">
-              <img
-                src={element.icon || "/placeholder.svg"}
-                alt={element.name}
-                style={{ width: "70px", height: "70px" }}
-              />
+              <img src={element.icon || "/placeholder.svg"} alt={element.name} style={{ width: "70px", height: "70px" }} />
             </div>
             <div className="element-name" style={{ marginTop: "10px", fontSize: "14px" }}>
               {element.name}
@@ -227,8 +203,6 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
           </div>
         ))}
       </div>
-
-      {/* Pagination */}
       <div className="pagination" style={{ marginTop: "20px", textAlign: "center" }}>
         <button
           className="pagination-button"
@@ -246,9 +220,7 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
         >
           &lt;
         </button>
-
         {renderPaginationButtons()}
-
         <button
           className="pagination-button"
           onClick={() => handlePageChange(currentPage + 1)}
@@ -267,5 +239,5 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
