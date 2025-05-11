@@ -34,11 +34,7 @@ func SearchRecipe(c *gin.Context) {
   case "DFS":
     results, nodesVisited, executionTime = services.DFS(requestBody.ElementName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil DFS
   case "Bidirectional":
-    if requestBody.TargetName == "" { // Validasi jika Bidirectional harus ada target
-      c.JSON(http.StatusBadRequest, gin.H{"error": "TargetName required for Bidirectional"})
-      return
-    }
-    results, nodesVisited, executionTime = services.Bidirectional(requestBody.ElementName, requestBody.TargetName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil Bidirectional
+    results, nodesVisited, executionTime = services.Bidirectional(requestBody.ElementName, requestBody.RecipeType, requestBody.MaxRecipes) // Panggil Bidirectional
   default:
     c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid algorithm"}) // Jika algoritma tidak valid, kirim error 400
     return

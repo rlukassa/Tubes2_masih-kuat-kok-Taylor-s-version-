@@ -36,15 +36,7 @@ export default function ElementPicker({ algorithm, onElementSelect }) {
 
   const handleElementClick = (element) => {
     let newSelectedElements;
-    if (algorithm === "BFS" || algorithm === "DFS") {
-      newSelectedElements = [element];
-    } else if (algorithm === "Bidirectional") {
-      if (selectedElements.length < 2) {
-        newSelectedElements = [...selectedElements, element];
-      } else {
-        newSelectedElements = [element];
-      }
-    }
+    newSelectedElements = [element];
     setSelectedElements(newSelectedElements);
     onElementSelect(newSelectedElements);
   };
