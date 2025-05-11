@@ -1,7 +1,6 @@
 // src/components/TreeVisualizer.jsx
 // Komponen visualisasi pohon resep menggunakan D3.js.
-// Menampilkan hasil pencarian dalam bentuk tree secara live update,
-// lengkap dengan gambar/icon dan nama elemen.
+// Menampilkan hasil pencarian dalam bentuk tree langsung tanpa animasi.
 
 "use client";
 
@@ -13,60 +12,17 @@ export default function TreeVisualizer({
   results, 
   selectedElement, 
   isLoading, 
-  searchProgress, // Node yang sedang diproses saat pencarian
   nodesVisited,  // Jumlah node yang telah dikunjungi
   searchAlgorithm // BFS, DFS, atau Bidirectional
 }) {
   const svgRef = useRef(null); // Referensi ke elemen SVG untuk D3
   const containerRef = useRef(null); // Referensi ke container untuk mengambil ukuran
   const [zoom, setZoom] = useState(1); // State untuk level zoom
-  const [treeData, setTreeData] = useState(null); // State untuk data tree
-  const [visibleResults, setVisibleResults] = useState([]); // State untuk hasil yang terlihat (animasi)
-  
-  // Setup data tree awal ketika results berubah
-  useEffect(() => {
-    if (!results || results.length === 0) {
-      setVisibleResults([]);
-      setTreeData(null);
-      return;
-    }
-    
-    // Inisialisasi root node dengan elemen yang dipilih
-    const initialTree = {
-      name: selectedElement?.name || "No Element Selected",
-      image: selectedElement?.icon || "",
-      children: []
-    };
-    
-    setTreeData(initialTree);
-    
-    // Mulai animasi live update - tambahkan hasil secara bertahap
-    if (!isLoading) {
-      // Jika tidak loading, tampilkan semua hasil sekaligus
-      setVisibleResults(results);
-    } else {
-      // Reset untuk animasi baru
-      setVisibleResults([]);
-      
-      // Tambahkan node secara berurutan dengan delay
-      let index = 0;
-      const addNodesInterval = setInterval(() => {
-        if (index < results.length) {
-          setVisibleResults(prev => [...prev, results[index]]);
-          index++;
-        } else {
-          clearInterval(addNodesInterval);
-        }
-      }, 300); // 300ms delay antara penambahan node
-      
-      return () => clearInterval(addNodesInterval);
-    }
-  }, [results, selectedElement, isLoading]);
   
   // Render ulang tree setiap kali hasil, loading, atau zoom berubah
   useEffect(() => {
     renderTree();
-  }, [visibleResults, isLoading, zoom, searchProgress, treeData]);
+  }, [results, isLoading, zoom, selectedElement]);
   
   // Fungsi untuk menghasilkan warna berdasarkan kedalaman node
   const getNodeColor = (depth) => {
@@ -76,18 +32,18 @@ export default function TreeVisualizer({
   
   // Fungsi utama untuk menggambar tree dengan D3
   const renderTree = () => {
-    if (!svgRef.current || !containerRef.current) return;
+    if (!svgRef.current || !containerRef.current || !results || results.length === 0) return;
     
     d3.select(svgRef.current).selectAll("*").remove(); // Bersihkan SVG sebelum render ulang
     
     const width = containerRef.current.clientWidth; // Lebar container
     const height = containerRef.current.clientHeight; // Tinggi container
     
-    // Data root tree, children diisi dari hasil yang terlihat
-    const rootData = treeData || {
+    // Data root tree langsung dari hasil
+    const rootData = {
       name: selectedElement?.name || "No Element Selected",
       image: selectedElement?.icon || "",
-      children: visibleResults
+      children: results
     };
     
     // Layout pohon dengan ukuran tertentu
@@ -121,7 +77,7 @@ export default function TreeVisualizer({
     // Terapkan zoom ke SVG
     svg.call(zoomer);
     
-    // Gambar garis antar node (link) dengan animasi
+    // Gambar garis antar node (link)
     const links = g.selectAll(".link")
       .data(root.links())
       .enter()
@@ -132,18 +88,7 @@ export default function TreeVisualizer({
         .y((d) => d.x))
       .attr("stroke", (d) => getNodeColor(d.source.depth))
       .attr("fill", "none")
-      .attr("stroke-width", 2)
-      .attr("stroke-dasharray", function() {
-        const length = this.getTotalLength();
-        return `${length} ${length}`;
-      })
-      .attr("stroke-dashoffset", function() {
-        return this.getTotalLength();
-      })
-      .transition()
-      .duration(500)
-      .delay((d, i) => i * 50)
-      .attr("stroke-dashoffset", 0);
+      .attr("stroke-width", 2);
     
     // Gambar node (elemen) beserta icon dan nama
     const nodes = g.selectAll(".node")
@@ -151,12 +96,7 @@ export default function TreeVisualizer({
       .enter()
       .append("g")
       .attr("class", "node")
-      .attr("transform", (d) => `translate(${d.y}, ${d.x})`)
-      .attr("opacity", 0)
-      .transition()
-      .duration(500)
-      .delay((d, i) => i * 50)
-      .attr("opacity", 1);
+      .attr("transform", (d) => `translate(${d.y}, ${d.x})`);
     
     // Tentukan ukuran node berdasarkan kedalaman
     const nodeSize = (depth) => {
@@ -202,9 +142,9 @@ export default function TreeVisualizer({
       .style("fill", "#666");
   };
   
-  // Tampilkan visualisasi proses pencarian
+  // Tampilkan informasi pencarian yang sudah selesai
   const renderSearchInfo = () => {
-    if (!isLoading && !searchProgress) return null;
+    if (!results || results.length === 0) return null;
     
     return (
       <div className="search-info" style={{ 
@@ -217,29 +157,15 @@ export default function TreeVisualizer({
         boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
         zIndex: 10
       }}>
-        <h3>Search Progress</h3>
+        <h3>Search Results</h3>
         <p><strong>Algorithm:</strong> {searchAlgorithm}</p>
         <p><strong>Nodes visited:</strong> {nodesVisited}</p>
-        {searchProgress && (
-          <p><strong>Current node:</strong> {searchProgress.name || "Processing..."}</p>
-        )}
-        {isLoading && (
-          <div className="spinner" style={{
-            width: "20px",
-            height: "20px",
-            border: "3px solid #f3f3f3",
-            borderTop: "3px solid #3498db",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            display: "inline-block",
-            marginLeft: "10px"
-          }}></div>
-        )}
+        <p><strong>Recipes found:</strong> {results.length}</p>
       </div>
     );
   };
   
-  // Tambahkan animasi CSS untuk spinner
+  // Tampilkan spinner selama loading
   const spinnerStyle = `
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -272,8 +198,8 @@ export default function TreeVisualizer({
     );
   }
   
-  // Tampilkan loading state jika belum ada data
-  if (isLoading && (!visibleResults || visibleResults.length === 0)) {
+  // Tampilkan loading state jika sedang loading
+  if (isLoading) {
     return (
       <div className="tree-loading" style={{
         display: "flex",
@@ -296,11 +222,6 @@ export default function TreeVisualizer({
         <p style={{ margin: "20px 0", fontSize: "16px" }}>
           Searching recipes for {selectedElement?.name}...
         </p>
-        {nodesVisited > 0 && (
-          <p style={{ fontSize: "14px", color: "#666" }}>
-            Visited {nodesVisited} nodes using {searchAlgorithm}
-          </p>
-        )}
       </div>
     );
   }

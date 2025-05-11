@@ -25,5 +25,21 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "vite": "^6.3.1"
-  }
+  },
+  "description": "",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rlukassa/Tubes2_masih-kuat-kok-Taylor-s-version-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rlukassa/Tubes2_masih-kuat-kok-Taylor-s-version-/issues"
+  },
+  "homepage": "https://github.com/rlukassa/Tubes2_masih-kuat-kok-Taylor-s-version-#readme"
 }

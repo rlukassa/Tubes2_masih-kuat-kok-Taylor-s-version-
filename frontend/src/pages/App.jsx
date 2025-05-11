@@ -47,19 +47,8 @@ const processedResults = useMemo(() => {
 // sehingga pohon akan muncul secara bertahap (mirip animasi progres pencarian).
 useEffect(() => {
   if (!processedResults.length || isLoading) return;
-  let index = 0;
-  setLiveTreeData([]); // Reset tree
-  const interval = setInterval(() => {
-    if (index < processedResults.length) {
-      setLiveTreeData((prev) => [...prev, processedResults[index]]);
-      index++;
-    } else {
-      clearInterval(interval); // Hentikan interval jika sudah selesai
-    }
-  }, 100); // Delay 100ms antar node
-  return () => clearInterval(interval); // Bersihkan interval jika dependensi berubah
+  setLiveTreeData(processedResults);
 }, [processedResults, isLoading]);
-
 
   // Fungsi untuk mengubah tampilan ke halaman pencarian saat tombol "Start Exploring" ditekan.
   const handleStartExploring = () => {
