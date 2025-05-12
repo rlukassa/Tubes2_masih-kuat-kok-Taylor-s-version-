@@ -5,9 +5,10 @@
 package controllers
 
 import (
-  "net/http"              // Untuk kebutuhan HTTP response 
-  "github.com/gin-gonic/gin" // Framework web Gin
-  "main/services"         // Import service pencarian resep
+	"main/services" // Import service pencarian resep
+	"net/http"      // Untuk kebutuhan HTTP response
+
+	"github.com/gin-gonic/gin" // Framework web Gin
 )
 
 func SearchRecipe(c *gin.Context) {

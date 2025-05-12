@@ -8,6 +8,19 @@ import React from "react";
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
+// Helper function to ensure all nodes have a children property
+function ensureChildrenExist(node) {
+  if (!node) return { name: "Unknown", children: [] };
+  
+  const newNode = { ...node };
+  if (!newNode.children) {
+    newNode.children = [];
+  } else if (Array.isArray(newNode.children)) {
+    newNode.children = newNode.children.map(ensureChildrenExist);
+  }
+  return newNode;
+}
+
 export default function TreeVisualizer({ 
   results, 
   selectedElement, 
@@ -35,16 +48,18 @@ export default function TreeVisualizer({
     if (!svgRef.current || !containerRef.current || !results || results.length === 0) return;
     
     d3.select(svgRef.current).selectAll("*").remove(); // Bersihkan SVG sebelum render ulang
-    
-    const width = containerRef.current.clientWidth; // Lebar container
+      const width = containerRef.current.clientWidth; // Lebar container
     const height = containerRef.current.clientHeight; // Tinggi container
     
+    // Ensure each node in results has a children property
+    const processedResults = results.map(ensureChildrenExist);
+    
     // Data root tree langsung dari hasil
-    const rootData = {
+    const rootData = ensureChildrenExist({
       name: selectedElement?.name || "No Element Selected",
       image: selectedElement?.icon || "",
-      children: results
-    };
+      children: processedResults
+    });
     
     // Layout pohon dengan ukuran tertentu
     const treeLayout = d3.tree().size([height - 100, width - 200]);
@@ -207,7 +222,6 @@ export default function TreeVisualizer({
         alignItems: "center",
         height: "600px",
         flexDirection: "column",
-        background: "#f9f9f9",
         borderRadius: "8px"
       }}>
         <style>{spinnerStyle}</style>

@@ -4,12 +4,15 @@
 package services
 
 import (
-  "database/sql"      // Untuk koneksi database SQLite
-  "encoding/json"     // Untuk decode file JSON
-  "log"               // Untuk logging error
-  "os"                // Untuk akses file
-  "time"              // Untuk pengukuran waktu eksekusi
-  _ "github.com/mattn/go-sqlite3" // Driver SQLite
+	"database/sql"  // Untuk koneksi database SQLite
+	"encoding/json" // Untuk decode file JSON
+	"log"           // Untuk logging error
+	// Untuk kalkulasi progress
+	"os"   // Untuk akses file
+	"time" // Untuk pengukuran waktu eksekusi
+
+	_ "github.com/mattn/go-sqlite3" // Driver SQLite
+	// Import utils untuk progress tracking
 )
 
 var db *sql.DB                    // Variabel global untuk koneksi database
