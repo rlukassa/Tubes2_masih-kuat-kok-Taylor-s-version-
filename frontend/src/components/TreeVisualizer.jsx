@@ -8,16 +8,22 @@ import React from "react";
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
-// Helper function to ensure all nodes have a children property
-function ensureChildrenExist(node) {
+// Helper function to ensure all nodes have a children property and recursively process them
+function processNode(node) {
   if (!node) return { name: "Unknown", children: [] };
   
   const newNode = { ...node };
+  
+  // Ensure children exists and is an array
   if (!newNode.children) {
     newNode.children = [];
-  } else if (Array.isArray(newNode.children)) {
-    newNode.children = newNode.children.map(ensureChildrenExist);
   }
+  
+  // Recursively process children, even if it's an empty array
+  if (Array.isArray(newNode.children)) {
+    newNode.children = newNode.children.map(processNode);
+  }
+  
   return newNode;
 }
 
@@ -48,21 +54,21 @@ export default function TreeVisualizer({
     if (!svgRef.current || !containerRef.current || !results || results.length === 0) return;
     
     d3.select(svgRef.current).selectAll("*").remove(); // Bersihkan SVG sebelum render ulang
-      const width = containerRef.current.clientWidth; // Lebar container
+    const width = containerRef.current.clientWidth; // Lebar container
     const height = containerRef.current.clientHeight; // Tinggi container
     
-    // Ensure each node in results has a children property
-    const processedResults = results.map(ensureChildrenExist);
+    // Process all results recursively
+    const processedResults = results.map(processNode);
     
     // Data root tree langsung dari hasil
-    const rootData = ensureChildrenExist({
+    const rootData = processNode({
       name: selectedElement?.name || "No Element Selected",
       image: selectedElement?.icon || "",
       children: processedResults
     });
     
-    // Layout pohon dengan ukuran tertentu
-    const treeLayout = d3.tree().size([height - 100, width - 200]);
+    // Layout pohon dengan ukuran yang lebih besar untuk mengakomodasi pohon yang dalam
+    const treeLayout = d3.tree().size([height * 2, width * 2]);
     const root = d3.hierarchy(rootData);
     
     // Tambahkan depth sebagai properti untuk pewarnaan
@@ -75,8 +81,8 @@ export default function TreeVisualizer({
     
     // Inisialisasi SVG dan group utama
     const svg = d3.select(svgRef.current)
-      .attr("width", width)
-      .attr("height", height);
+      .attr("width", width * 2)
+      .attr("height", height * 2);
     
     // Tambahkan transformasi dengan zoom
     const g = svg.append("g")
@@ -84,7 +90,7 @@ export default function TreeVisualizer({
     
     // Definisikan perilaku zoom
     const zoomer = d3.zoom()
-      .scaleExtent([0.5, 3])
+      .scaleExtent([0.1, 5]) // Extend zoom range
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
@@ -105,6 +111,11 @@ export default function TreeVisualizer({
       .attr("fill", "none")
       .attr("stroke-width", 2);
     
+    // Tentukan ukuran node dengan mempertimbangkan kedalaman yang lebih dalam
+    const nodeSize = (depth) => {
+      return Math.max(40 - (depth * 3), 20); // Ukuran menurun dengan kedalaman, minimal 20px
+    };
+    
     // Gambar node (elemen) beserta icon dan nama
     const nodes = g.selectAll(".node")
       .data(root.descendants())
@@ -113,22 +124,15 @@ export default function TreeVisualizer({
       .attr("class", "node")
       .attr("transform", (d) => `translate(${d.y}, ${d.x})`);
     
-    // Tentukan ukuran node berdasarkan kedalaman
-    const nodeSize = (depth) => {
-      return Math.max(50 - (depth * 5), 30); // Ukuran menurun dengan kedalaman, minimal 30px
-    };
-    
     // Tambahkan lingkaran sebagai latar belakang node
-    g.selectAll(".node")
-      .append("circle")
+    nodes.append("circle")
       .attr("r", (d) => nodeSize(d.depth) / 2)
       .attr("fill", (d) => getNodeColor(d.depth))
       .attr("stroke", "#333")
       .attr("stroke-width", 1);
     
     // Gambar icon elemen (atau placeholder jika tidak ada)
-    g.selectAll(".node")
-      .append("image") 
+    nodes.append("image") 
       .attr("xlink:href", (d) => d.data.image || "/placeholder.svg")
       .attr("width", (d) => nodeSize(d.depth))
       .attr("height", (d) => nodeSize(d.depth))
@@ -136,48 +140,13 @@ export default function TreeVisualizer({
       .attr("y", (d) => -nodeSize(d.depth) / 2);
     
     // Tampilkan nama elemen di bawah icon
-    g.selectAll(".node")
-      .append("text")
-      .attr("dy", (d) => nodeSize(d.depth) / 2 + 15)
+    nodes.append("text")
+      .attr("dy", (d) => nodeSize(d.depth) / 2 + 10)
       .attr("text-anchor", "middle")
       .text((d) => d.data.name)
-      .style("font-size", (d) => Math.max(13 - d.depth, 9) + "px")
+      .style("font-size", (d) => Math.max(10 - (d.depth * 0.5), 6) + "px")
       .style("font-weight", (d) => d.depth === 0 ? "bold" : "normal")
       .style("fill", "#333");
-    
-    // Tambahkan informasi resep jika ada
-    g.selectAll(".node")
-      .filter((d) => d.data.recipe && Array.isArray(d.data.recipe))
-      .append("text")
-      .attr("dy", (d) => nodeSize(d.depth) / 2 + 30)
-      .attr("text-anchor", "middle")
-      .text((d) => d.data.recipe[0] || "")
-      .style("font-size", "10px")
-      .style("font-style", "italic")
-      .style("fill", "#666");
-  };
-  
-  // Tampilkan informasi pencarian yang sudah selesai
-  const renderSearchInfo = () => {
-    if (!results || results.length === 0) return null;
-    
-    return (
-      <div className="search-info" style={{ 
-        position: "absolute", 
-        top: "10px", 
-        left: "10px", 
-        background: "rgba(255,255,255,0.8)",
-        padding: "10px",
-        borderRadius: "5px",
-        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-        zIndex: 10
-      }}>
-        <h3>Search Results</h3>
-        <p><strong>Algorithm:</strong> {searchAlgorithm}</p>
-        <p><strong>Nodes visited:</strong> {nodesVisited}</p>
-        <p><strong>Recipes found:</strong> {results.length}</p>
-      </div>
-    );
   };
   
   // Tampilkan spinner selama loading
@@ -250,91 +219,7 @@ export default function TreeVisualizer({
       borderRadius: "8px",
       overflow: "hidden"
     }}>
-      <style>{spinnerStyle}</style>
       <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
-      
-      {renderSearchInfo()}
-      
-      <div className="recipe-info" style={{
-        position: "absolute",
-        bottom: "60px",
-        right: "10px",
-        background: "rgba(255,255,255,0.9)",
-        padding: "10px",
-        borderRadius: "5px",
-        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-        maxWidth: "300px",
-        maxHeight: "200px",
-        overflowY: "auto",
-        display: selectedElement && results && results.length > 0 ? "block" : "none"
-      }}>
-        <h3>Recipe for {selectedElement?.name}</h3>
-        {results && results[0]?.recipe && Array.isArray(results[0].recipe) ? (
-          <ul style={{ padding: "0 0 0 20px", margin: "5px 0" }}>
-            {results[0].recipe.map((step, i) => (
-              <li key={i} style={{ margin: "5px 0" }}>{step}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>{results && results[0]?.recipe || "No recipe details available"}</p>
-        )}
-      </div>
-      
-      <div className="zoom-controls" style={{ 
-        position: "absolute", 
-        bottom: "10px", 
-        right: "10px",
-        background: "white",
-        borderRadius: "5px",
-        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-        padding: "5px"
-      }}>
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom((prev) => Math.min(prev + 0.2, 3))}
-          style={{
-            border: "none",
-            background: "#3498db",
-            color: "white",
-            width: "30px",
-            height: "30px",
-            borderRadius: "5px",
-            margin: "0 5px",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >+</button>
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom(1)}
-          style={{
-            border: "none",
-            background: "#2ecc71",
-            color: "white",
-            width: "30px",
-            height: "30px",
-            borderRadius: "5px",
-            margin: "0 5px",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >⟳</button>
-        <button 
-          className="zoom-button" 
-          onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.5))}
-          style={{
-            border: "none",
-            background: "#3498db",
-            color: "white",
-            width: "30px",
-            height: "30px",
-            borderRadius: "5px",
-            margin: "0 5px",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >-</button>
-      </div>
     </div>
   );
 }
