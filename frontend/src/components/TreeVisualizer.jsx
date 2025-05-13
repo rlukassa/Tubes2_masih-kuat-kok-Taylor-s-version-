@@ -262,6 +262,22 @@ export default function TreeVisualizer({
     }}>
       <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
       
+      Recipe information and stats
+      <div className="recipe-info" style={{
+        position: "absolute",
+        top: "10px",
+        right: "10px",
+        background: "rgba(255, 255, 255, 0.9)",
+        padding: "10px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+        fontSize: "14px"
+      }}>
+        <p style={{ margin: "0" }}>
+          <strong>Total Recipes:</strong> {results.length}
+        </p>
+      </div>
+      
       {/* Add recipe navigation controls if there are multiple recipes */}
       {results.length > 1 && (
         <div className="recipe-navigation" style={{

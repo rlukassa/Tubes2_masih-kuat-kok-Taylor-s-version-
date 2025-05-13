@@ -10,7 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/PuerkitoBio/goquery"
-	_ "github.com/mattn/go-sqlite3" // Untuk SQLite
+	"github.com/mattn/go-sqlite3" // Untuk SQLite
 )
 
 func main() {
