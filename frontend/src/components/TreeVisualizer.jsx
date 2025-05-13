@@ -1,6 +1,6 @@
 // src/components/TreeVisualizer.jsx
 // Komponen visualisasi pohon resep menggunakan D3.js.
-// Menampilkan hasil pencarian dalam bentuk tree langsung tanpa animasi.
+// Menampilkan hasil pencarian dalam bentuk tree dengan navigasi untuk multiple recipes.
 
 "use client";
 
@@ -32,21 +32,37 @@ export default function TreeVisualizer({
   selectedElement, 
   isLoading, 
   nodesVisited,  // Jumlah node yang telah dikunjungi
-  searchAlgorithm // BFS, DFS, atau Bidirectional
+  searchAlgorithm, // BFS, DFS, atau Bidirectional
+  searchParams // Add search parameters to display recipe type info
 }) {
   const svgRef = useRef(null); // Referensi ke elemen SVG untuk D3
   const containerRef = useRef(null); // Referensi ke container untuk mengambil ukuran
   const [zoom, setZoom] = useState(1); // State untuk level zoom
+  const [currentRecipeIndex, setCurrentRecipeIndex] = useState(0); // State untuk recipe yang aktif
   
-  // Render ulang tree setiap kali hasil, loading, atau zoom berubah
+  // Reset current recipe index when results change
+  useEffect(() => {
+    setCurrentRecipeIndex(0);
+  }, [results]);
+  
+  // Render ulang tree setiap kali hasil, loading, zoom, atau recipe index berubah
   useEffect(() => {
     renderTree();
-  }, [results, isLoading, zoom, selectedElement]);
+  }, [results, isLoading, zoom, selectedElement, currentRecipeIndex]);
   
   // Fungsi untuk menghasilkan warna berdasarkan kedalaman node
   const getNodeColor = (depth) => {
     const colors = ["#4CAF50", "#2196F3", "#FFC107", "#E91E63", "#9C27B0", "#FF5722"];
     return colors[depth % colors.length];
+  };
+  
+  // Fungsi untuk navigasi antar recipe
+  const handlePrevRecipe = () => {
+    setCurrentRecipeIndex(prev => Math.max(prev - 1, 0));
+  };
+  
+  const handleNextRecipe = () => {
+    setCurrentRecipeIndex(prev => Math.min(prev + 1, results.length - 1));
   };
   
   // Fungsi utama untuk menggambar tree dengan D3
@@ -57,19 +73,16 @@ export default function TreeVisualizer({
     const width = containerRef.current.clientWidth; // Lebar container
     const height = containerRef.current.clientHeight; // Tinggi container
     
-    // Process all results recursively
-    const processedResults = results.map(processNode);
+    // Get the current recipe to display
+    const currentRecipe = results[currentRecipeIndex];
+    if (!currentRecipe) return;
     
-    // Data root tree langsung dari hasil
-    const rootData = processNode({
-      name: selectedElement?.name || "No Element Selected",
-      image: selectedElement?.icon || "",
-      children: processedResults
-    });
+    // Process the current recipe
+    const processedRecipe = processNode(currentRecipe);
     
     // Layout pohon dengan ukuran yang lebih besar untuk mengakomodasi pohon yang dalam
     const treeLayout = d3.tree().size([height * 2, width * 2]);
-    const root = d3.hierarchy(rootData);
+    const root = d3.hierarchy(processedRecipe);
     
     // Tambahkan depth sebagai properti untuk pewarnaan
     root.descendants().forEach((d, i) => {
@@ -147,6 +160,34 @@ export default function TreeVisualizer({
       .style("font-size", (d) => Math.max(10 - (d.depth * 0.5), 6) + "px")
       .style("font-weight", (d) => d.depth === 0 ? "bold" : "normal")
       .style("fill", "#333");
+    
+    // Display recipe steps if available
+    if (currentRecipe.recipe && Array.isArray(currentRecipe.recipe)) {
+      const recipePanel = svg.append("g")
+        .attr("transform", `translate(20, 30)`);
+      
+      recipePanel.append("rect")
+        .attr("width", 250)
+        .attr("height", currentRecipe.recipe.length * 22 + 40)
+        .attr("fill", "rgba(255, 255, 255, 0.9)")
+        .attr("rx", 5)
+        .attr("ry", 5)
+        .attr("stroke", "#ddd");
+      
+      recipePanel.append("text")
+        .attr("x", 10)
+        .attr("y", 25)
+        .text("Recipe Steps:")
+        .style("font-weight", "bold");
+      
+      currentRecipe.recipe.forEach((step, i) => {
+        recipePanel.append("text")
+          .attr("x", 15)
+          .attr("y", 45 + i * 20)
+          .text(step)
+          .style("font-size", "12px");
+      });
+    }
   };
   
   // Tampilkan spinner selama loading
@@ -209,7 +250,7 @@ export default function TreeVisualizer({
     );
   }
   
-  // Tampilkan visualisasi pohon, kontrol zoom, dan info pencarian
+  // Tampilkan visualisasi pohon, kontrol zoom, dan navigasi recipe
   return (
     <div className="tree-container" ref={containerRef} style={{ 
       position: "relative", 
@@ -220,6 +261,81 @@ export default function TreeVisualizer({
       overflow: "hidden"
     }}>
       <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
+      
+      {/* Recipe information and stats */}
+      <div className="recipe-info" style={{
+        position: "absolute",
+        top: "10px",
+        right: "10px",
+        background: "rgba(255, 255, 255, 0.9)",
+        padding: "10px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+        fontSize: "14px"
+      }}>
+        <p style={{ margin: "0 0 5px 0" }}>
+          <strong>Algorithm:</strong> {searchAlgorithm}
+        </p>
+        <p style={{ margin: "0 0 5px 0" }}>
+          <strong>Nodes Visited:</strong> {nodesVisited}
+        </p>
+        <p style={{ margin: "0 0 5px 0" }}>
+          <strong>Recipe Type:</strong> {searchParams?.recipeType}
+        </p>
+        <p style={{ margin: "0" }}>
+          <strong>Total Recipes:</strong> {results.length}
+        </p>
+      </div>
+      
+      {/* Add recipe navigation controls if there are multiple recipes */}
+      {results.length > 1 && (
+        <div className="recipe-navigation" style={{
+          position: "absolute",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          alignItems: "center",
+          background: "rgba(255, 255, 255, 0.9)",
+          padding: "10px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)"
+        }}>
+          <button 
+            onClick={handlePrevRecipe} 
+            disabled={currentRecipeIndex === 0}
+            style={{
+              background: currentRecipeIndex === 0 ? "#eee" : "#2196F3",
+              color: currentRecipeIndex === 0 ? "#999" : "white",
+              border: "none",
+              borderRadius: "4px",
+              padding: "8px 16px",
+              marginRight: "10px",
+              cursor: currentRecipeIndex === 0 ? "default" : "pointer"
+            }}
+          >
+            Previous Recipe
+          </button>
+          <span style={{ margin: "0 10px" }}>
+            Recipe {currentRecipeIndex + 1} of {results.length}
+          </span>
+          <button 
+            onClick={handleNextRecipe} 
+            disabled={currentRecipeIndex === results.length - 1}
+            style={{
+              background: currentRecipeIndex === results.length - 1 ? "#eee" : "#2196F3",
+              color: currentRecipeIndex === results.length - 1 ? "#999" : "white",
+              border: "none",
+              borderRadius: "4px",
+              padding: "8px 16px",
+              marginLeft: "10px",
+              cursor: currentRecipeIndex === results.length - 1 ? "default" : "pointer"
+            }}
+          >
+            Next Recipe
+          </button>
+        </div>
+      )}
     </div>
   );
 }

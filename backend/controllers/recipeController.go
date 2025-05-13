@@ -17,7 +17,7 @@ func SearchRecipe(c *gin.Context) {
     Algorithm   string `json:"algorithm"`   // Algoritma pencarian (BFS, DFS, Bidirectional)
     RecipeType  string `json:"recipeType"`  // Tipe resep (misal: One Recipe)
     MaxRecipes  int    `json:"maxRecipes"`  // Maksimal jumlah resep -- buat RecipeType = "Limit .. "
-    TargetName  string `json:"targetName"`  // Target untuk buat Algoritma Bidirectional 
+    // TargetName  string `json:"targetName"`  // Target untuk buat Algoritma Bidirectional  -- ga kepake
   }
 
   if err := c.ShouldBindJSON(&requestBody); err != nil { // Bind dan validasi request body dari frontend
