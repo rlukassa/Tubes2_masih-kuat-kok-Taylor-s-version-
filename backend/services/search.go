@@ -1,4 +1,4 @@
-// Complete search.go implementation with full decomposition to basic elements
+// Modified search.go implementation with early stopping
 package services
 
 import (
@@ -146,27 +146,29 @@ func BFS(elementName string, recipeType string, maxRecipes int) ([]interface{}, 
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 
-	// Find all complete recipes using BFS
-	allRecipes := findAllRecipesBFS(elementName, basicElements, &nodesVisited)
+	// Determine the number of recipes to find based on recipeType
+	var desiredRecipeCount int
+	if recipeType == "One" {
+		desiredRecipeCount = 1
+	} else if recipeType == "Limit" {
+		desiredRecipeCount = maxRecipes
+	} else {
+		// For "All", set to a very large number to find all recipes
+		desiredRecipeCount = 1000000
+	}
+
+	// Find recipes with early stopping
+	allRecipes, nodesVisitedCount := findRecipesBFS(elementName, basicElements, desiredRecipeCount)
+	nodesVisited = nodesVisitedCount
 	
 	// If no recipes found, return default
 	if len(allRecipes) == 0 {
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 	
-	// Limit recipes based on recipeType
-	var recipesToUse [][]RecipeStep
-	if recipeType == "One" && len(allRecipes) > 0 {
-		recipesToUse = allRecipes[:1]
-	} else if recipeType == "Limit" && len(allRecipes) > maxRecipes {
-		recipesToUse = allRecipes[:maxRecipes]
-	} else {
-		recipesToUse = allRecipes
-	}
-	
 	// Convert recipes to result format
 	var results []interface{}
-	for _, recipe := range recipesToUse {
+	for _, recipe := range allRecipes {
 		// Create tree representation
 		treeRoot := createRecipeTree(elementName, recipe)
 		results = append(results, treeRoot)
@@ -175,9 +177,10 @@ func BFS(elementName string, recipeType string, maxRecipes int) ([]interface{}, 
 	return results, nodesVisited, float64(time.Since(start).Milliseconds())
 }
 
-// Function to find all possible recipes for an element using BFS
-func findAllRecipesBFS(elementName string, basicElements []string, nodesVisited *int) [][]RecipeStep {
+// Function to find recipes for an element using BFS with early stopping
+func findRecipesBFS(elementName string, basicElements []string, maxRecipesToFind int) ([][]RecipeStep, int) {
 	var allRecipes [][]RecipeStep
+	nodesVisited := 0
 	
 	// Queue for BFS
 	type QueueItem struct {
@@ -196,10 +199,10 @@ func findAllRecipesBFS(elementName string, basicElements []string, nodesVisited 
 	// Keep track of combinations we've added
 	processedCombinations := make(map[string]bool)
 	
-	for len(queue) > 0 {
+	for len(queue) > 0 && len(allRecipes) < maxRecipesToFind {
 		current := queue[0]
 		queue = queue[1:]
-		(*nodesVisited)++
+		nodesVisited++
 		
 		// Skip if we've already explored this element in the current path to avoid cycles
 		if current.Explored[current.Element] {
@@ -238,6 +241,11 @@ func findAllRecipesBFS(elementName string, basicElements []string, nodesVisited 
 			if !processedCombinations[recipeKey] {
 				processedCombinations[recipeKey] = true
 				allRecipes = append(allRecipes, current.Path)
+				
+				// Check if we've found enough recipes
+				if len(allRecipes) >= maxRecipesToFind {
+					break
+				}
 			}
 			continue
 		}
@@ -298,12 +306,17 @@ func findAllRecipesBFS(elementName string, basicElements []string, nodesVisited 
 				if !processedCombinations[recipeKey] {
 					processedCombinations[recipeKey] = true
 					allRecipes = append(allRecipes, newPath)
+					
+					// Check if we've found enough recipes
+					if len(allRecipes) >= maxRecipesToFind {
+						break
+					}
 				}
 			}
 		}
 	}
 	
-	return allRecipes
+	return allRecipes, nodesVisited
 }
 
 // Create a tree representation for a recipe
@@ -374,27 +387,29 @@ func DFS(elementName string, recipeType string, maxRecipes int) ([]interface{}, 
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 
-	// Find all complete recipes using DFS
-	allRecipes := findAllRecipesDFS(elementName, basicElements, &nodesVisited)
+	// Determine the number of recipes to find based on recipeType
+	var desiredRecipeCount int
+	if recipeType == "One" {
+		desiredRecipeCount = 1
+	} else if recipeType == "Limit" {
+		desiredRecipeCount = maxRecipes
+	} else {
+		// For "All", set to a very large number to find all recipes
+		desiredRecipeCount = 1000000
+	}
+
+	// Find recipes with early stopping
+	allRecipes, nodesVisitedCount := findRecipesDFS(elementName, basicElements, desiredRecipeCount)
+	nodesVisited = nodesVisitedCount
 	
 	// If no recipes found, return default
 	if len(allRecipes) == 0 {
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 	
-	// Limit recipes based on recipeType
-	var recipesToUse [][]RecipeStep
-	if recipeType == "One" && len(allRecipes) > 0 {
-		recipesToUse = allRecipes[:1]
-	} else if recipeType == "Limit" && len(allRecipes) > maxRecipes {
-		recipesToUse = allRecipes[:maxRecipes]
-	} else {
-		recipesToUse = allRecipes
-	}
-	
 	// Convert recipes to result format
 	var results []interface{}
-	for _, recipe := range recipesToUse {
+	for _, recipe := range allRecipes {
 		// Create tree representation
 		treeRoot := createRecipeTree(elementName, recipe)
 		
@@ -404,9 +419,10 @@ func DFS(elementName string, recipeType string, maxRecipes int) ([]interface{}, 
 	return results, nodesVisited, float64(time.Since(start).Milliseconds())
 }
 
-// Function to find all possible recipes for an element using DFS
-func findAllRecipesDFS(elementName string, basicElements []string, nodesVisited *int) [][]RecipeStep {
+// Function to find recipes for an element using DFS with early stopping
+func findRecipesDFS(elementName string, basicElements []string, maxRecipesToFind int) ([][]RecipeStep, int) {
 	var allRecipes [][]RecipeStep
+	nodesVisited := 0
 	
 	// Stack for DFS
 	type StackItem struct {
@@ -425,12 +441,12 @@ func findAllRecipesDFS(elementName string, basicElements []string, nodesVisited 
 	// Keep track of combinations we've added
 	processedCombinations := make(map[string]bool)
 	
-	for len(stack) > 0 {
+	for len(stack) > 0 && len(allRecipes) < maxRecipesToFind {
 		// Pop from stack (last in, first out)
 		last := len(stack) - 1
 		current := stack[last]
 		stack = stack[:last]
-		(*nodesVisited)++
+		nodesVisited++
 		
 		// Skip if we've already explored this element in the current path to avoid cycles
 		if current.Explored[current.Element] {
@@ -469,6 +485,11 @@ func findAllRecipesDFS(elementName string, basicElements []string, nodesVisited 
 			if !processedCombinations[recipeKey] {
 				processedCombinations[recipeKey] = true
 				allRecipes = append(allRecipes, current.Path)
+				
+				// Check if we've found enough recipes
+				if len(allRecipes) >= maxRecipesToFind {
+					break
+				}
 			}
 			continue
 		}
@@ -531,12 +552,17 @@ func findAllRecipesDFS(elementName string, basicElements []string, nodesVisited 
 				if !processedCombinations[recipeKey] {
 					processedCombinations[recipeKey] = true
 					allRecipes = append(allRecipes, newPath)
+					
+					// Check if we've found enough recipes
+					if len(allRecipes) >= maxRecipesToFind {
+						break
+					}
 				}
 			}
 		}
 	}
 	
-	return allRecipes
+	return allRecipes, nodesVisited
 }
 
 //================================================
@@ -563,33 +589,29 @@ func Bidirectional(elementName string, recipeType string, maxRecipes int) ([]int
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 
-	// For bidirectional search, we'll use a combination of forward and backward search
-	// Forward search is from target to ingredients
-	// Backward search is from basic elements toward more complex elements
-	
-	// For simplicity and to match the requirement of finding ALL distinct recipes,
-	// we'll adapt our approach to use a bidirectional-inspired search that can handle multiple paths
-	
-	allRecipes := findAllRecipesBidirectional(elementName, basicElements, &nodesVisited)
+	// Determine the number of recipes to find based on recipeType
+	var desiredRecipeCount int
+	if recipeType == "One" {
+		desiredRecipeCount = 1
+	} else if recipeType == "Limit" {
+		desiredRecipeCount = maxRecipes
+	} else {
+		// For "All", set to a very large number to find all recipes
+		desiredRecipeCount = 1000000
+	}
+
+	// Find recipes with early stopping
+	allRecipes, nodesVisitedCount := findRecipesBidirectional(elementName, basicElements, desiredRecipeCount)
+	nodesVisited = nodesVisitedCount
 	
 	// If no recipes found, return default
 	if len(allRecipes) == 0 {
 		return getDefaultResult(elementName), nodesVisited, float64(time.Since(start).Milliseconds())
 	}
 	
-	// Limit recipes based on recipeType
-	var recipesToUse [][]RecipeStep
-	if recipeType == "One" && len(allRecipes) > 0 {
-		recipesToUse = allRecipes[:1]
-	} else if recipeType == "Limit" && len(allRecipes) > maxRecipes {
-		recipesToUse = allRecipes[:maxRecipes]
-	} else {
-		recipesToUse = allRecipes
-	}
-	
 	// Convert recipes to result format
 	var results []interface{}
-	for _, recipe := range recipesToUse {
+	for _, recipe := range allRecipes {
 		// Create tree representation
 		treeRoot := createRecipeTree(elementName, recipe)
 		
@@ -599,9 +621,10 @@ func Bidirectional(elementName string, recipeType string, maxRecipes int) ([]int
 	return results, nodesVisited, float64(time.Since(start).Milliseconds())
 }
 
-// Function to find all possible recipes using bidirectional search approach
-func findAllRecipesBidirectional(elementName string, basicElements []string, nodesVisited *int) [][]RecipeStep {
+// Function to find recipes using bidirectional search with early stopping
+func findRecipesBidirectional(elementName string, basicElements []string, maxRecipesToFind int) ([][]RecipeStep, int) {
 	var allRecipes [][]RecipeStep
+	nodesVisited := 0
 	
 	// Keep track of combinations we've added
 	processedCombinations := make(map[string]bool)
@@ -638,10 +661,10 @@ func findAllRecipesBidirectional(elementName string, basicElements []string, nod
 	}
 	
 	// Process forward queue first to find direct paths
-	for len(forwardQueue) > 0 {
+	for len(forwardQueue) > 0 && len(allRecipes) < maxRecipesToFind {
 		current := forwardQueue[0]
 		forwardQueue = forwardQueue[1:]
-		(*nodesVisited)++
+		nodesVisited++
 		
 		// Skip if we've already explored this element in the current path
 		if current.Explored[current.Element] {
@@ -676,6 +699,11 @@ func findAllRecipesBidirectional(elementName string, basicElements []string, nod
 			if !processedCombinations[recipeKey] {
 				processedCombinations[recipeKey] = true
 				allRecipes = append(allRecipes, current.Path)
+				
+				// Check if we've found enough recipes
+				if len(allRecipes) >= maxRecipesToFind {
+					break
+				}
 			}
 			continue
 		}
@@ -729,15 +757,15 @@ func findAllRecipesBidirectional(elementName string, basicElements []string, nod
 				if !processedCombinations[recipeKey] {
 					processedCombinations[recipeKey] = true
 					allRecipes = append(allRecipes, newPath)
+					
+					// Check if we've found enough recipes
+					if len(allRecipes) >= maxRecipesToFind {
+						break
+					}
 				}
 			}
 		}
 	}
 	
-	// If we already found recipes through forward search, return them
-	// For true bidirectional nature, we could continue with backward search
-	// to potentially find more recipes, but that would be more complex and not necessary
-	// for most use cases
-	
-	return allRecipes
+	return allRecipes, nodesVisited
 }

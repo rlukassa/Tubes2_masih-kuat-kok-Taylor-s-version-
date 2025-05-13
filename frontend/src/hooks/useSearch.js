@@ -18,14 +18,14 @@ export function useSearch() {
   const [executionTime, setExecutionTime] = useState(0);  // Lama waktu eksekusi pencarian (ms)
   const [nodesVisited, setNodesVisited] = useState(0);    // Jumlah node yang dikunjungi selama pencarian
   const [progress, setProgress] = useState(0);            // Progress pencarian (untuk animasi/progress bar)
-
+  const [totalRecipes, setTotalRecipes] = useState(0);    // Total resep yang ditemukan
   // Fungsi untuk memulai pencarian resep
   const startSearch = async (elements) => {
     setIsLoading(true);           // Set status loading
     setSearchResults([]);         // Reset hasil sebelumnya
-    setExecutionTime(0);          // Reset waktu eksekusi
-    setNodesVisited(0);           // Reset jumlah node
+    setExecutionTime(0);          // Reset waktu eksekusi    setNodesVisited(0);           // Reset jumlah node
     setProgress(0);               // Reset progress
+    setTotalRecipes(0);           // Reset total resep
 
     try {
       // Siapkan request body untuk dikirim ke backend
@@ -41,19 +41,18 @@ export function useSearch() {
       }
 
       // Kirim request ke backend (pastikan port dan endpoint sudah benar)
-      const response = await fetch("http://localhost:8081/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch("/api/search", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(requestBody),
+});
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-
-      // Simpan hasil pencarian ke state
+      const data = await response.json();      // Simpan hasil pencarian ke state
       setSearchResults(data.results);
       setNodesVisited(data.nodesVisited);
       setExecutionTime(data.executionTime);
+      setTotalRecipes(data.results ? data.results.length : 0); // Set total recipes
       setProgress(100); // Progress selesai
     } catch (error) {
       console.error("Search error:", error);
@@ -69,6 +68,7 @@ export function useSearch() {
     setExecutionTime(0);
     setNodesVisited(0);
     setProgress(0);
+    setTotalRecipes(0);
   };
 
   // Return semua state dan fungsi yang dibutuhkan komponen lain
@@ -80,6 +80,7 @@ export function useSearch() {
     executionTime,     // Lama eksekusi
     nodesVisited,      // Jumlah node dikunjungi
     progress,          // Progress pencarian
+    totalRecipes,      // Total resep yang ditemukan
     startSearch,       // Fungsi untuk memulai pencarian
     resetSearch,       // Fungsi untuk mereset hasil
   };

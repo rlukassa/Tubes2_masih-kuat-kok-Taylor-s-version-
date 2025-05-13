@@ -15,8 +15,7 @@ import mapper from "../../../database/mapper2.json";
 function App() {
   const [currentView, setCurrentView] = useState("landing");
   const [selectedElements, setSelectedElements] = useState([]);
-  const [liveTreeData, setLiveTreeData] = useState([]);
-  const {
+  const [liveTreeData, setLiveTreeData] = useState([]);  const {
     searchParams,
     setSearchParams,
     searchResults,
@@ -24,6 +23,7 @@ function App() {
     executionTime,
     nodesVisited,
     progress,
+    totalRecipes,
     startSearch,
     resetSearch,
   } = useSearch();
@@ -147,14 +147,14 @@ useEffect(() => {
             <span className="print-icon">🖨️</span> Print Tree
           </button>
         </div>
-        <div className="results-content">
-          <RecipeResults
+        <div className="results-content">          <RecipeResults
             selectedElement={selectedElements}
             algorithm={searchParams.algorithm}
             recipeType={searchParams.recipeType}
             progress={progress}
             executionTime={executionTime}
             nodesVisited={nodesVisited}
+            totalRecipes={totalRecipes}
           />
           <div className="visualization-container">
             <h2 className="visualization-title">Recipe Visualization</h2>

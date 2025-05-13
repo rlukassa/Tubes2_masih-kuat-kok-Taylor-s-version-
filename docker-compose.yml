@@ -1,0 +1,36 @@
+
+services:
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: alchemy-backend
+    restart: unless-stopped
+    volumes:
+      - ./database:/app/database
+    environment:
+      - GIN_MODE=release
+    networks:
+      - alchemy-network
+    ports:
+      - "8081:8081"
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: alchemy-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - alchemy-network
+    ports:
+      - "80:80"
+
+# Networks to be created
+networks:
+  alchemy-network:
+    driver: bridge

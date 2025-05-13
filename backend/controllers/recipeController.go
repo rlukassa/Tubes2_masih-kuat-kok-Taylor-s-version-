@@ -1,7 +1,4 @@
-// File ini adalah controller untuk endpoint pencarian resep pada backend Little Alchemy 2.
-// Fungsinya menerima request pencarian dari frontend, memanggil service pencarian (BFS, DFS, Bidirectional),
-// dan mengembalikan hasil pencarian dalam format JSON ke frontend.
-
+// Updated RecipeController.go
 package controllers
 
 import (
