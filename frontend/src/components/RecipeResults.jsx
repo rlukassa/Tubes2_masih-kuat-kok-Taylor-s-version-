@@ -5,6 +5,7 @@ export default function RecipeResults({
   progress,
   executionTime,
   nodesVisited,
+  totalRecipes, // Tambahkan prop untuk total recipes
 }) {
   return (
     <div className="recipe-details">
@@ -75,6 +76,12 @@ export default function RecipeResults({
         <div className="progress-bar">
           <div className="progress-fill" style={{ width: `${progress}%` }}></div>
         </div>
+      </div>
+
+      {/* Tambahkan informasi Total Recipes di bawah progress bar */}
+      <div className="detail-section">
+        <h3>Total Recipes</h3>
+        <div className="detail-value">{totalRecipes || 0}</div>
       </div>
 
       <div className="metrics">
